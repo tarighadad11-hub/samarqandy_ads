@@ -1,0 +1,136 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <title>شاشة عرض الإعلانات - {{ 'كل الفروع' if selected_branch == 'ALL' else selected_branch }}</title>
+    <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@700;800&display=swap" rel="stylesheet">
+    <style>
+        html, body {
+            margin: 0;
+            padding: 0;
+            width: 100%;
+            height: 100%;
+            background-color: #000000;
+            color: #ffffff;
+            font-family: 'Cairo', Arial, sans-serif;
+            overflow: hidden;
+        }
+        .stage {
+            position: relative;
+            width: 100vw;
+            height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: #000000;
+        }
+        .media-frame {
+            max-width: 100%;
+            max-height: 100%;
+            width: 100%;
+            height: 100%;
+            object-fit: contain;
+            display: none;
+        }
+        .empty-state {
+            text-align: center;
+            padding: 24px;
+            font-size: 22px;
+            font-weight: 800;
+            color: #e5e7eb;
+        }
+        .branch-pill {
+            position: fixed;
+            top: 14px;
+            left: 14px;
+            z-index: 20;
+            background: rgba(123, 17, 19, 0.88);
+            color: #ffffff;
+            padding: 6px 14px;
+            border-radius: 999px;
+            font-size: 12px;
+            font-weight: 800;
+        }
+    </style>
+</head>
+<body>
+    <div class="branch-pill">الفرع: {{ 'كل الفروع' if selected_branch == 'ALL' else selected_branch }}</div>
+    <div class="stage">
+        <img id="adImage" class="media-frame" alt="إعلان">
+        <video id="adVideo" class="media-frame" autoplay muted playsinline></video>
+        <div id="emptyState" class="empty-state" style="display: none;">لا توجد إعلانات نشطة حالياً لهذا الفرع</div>
+    </div>
+
+    <script>
+        const branchName = {{ selected_branch | tojson }};
+        const imgEl = document.getElementById('adImage');
+        const vidEl = document.getElementById('adVideo');
+        const emptyEl = document.getElementById('emptyState');
+
+        let adsQueue = [];
+        let currentIdx = 0;
+        let slideTimer = null;
+
+        function clearTimer() {
+            if (slideTimer) {
+                clearTimeout(slideTimer);
+                slideTimer = null;
+            }
+        }
+
+        function playNextAd() {
+            clearTimer();
+            if (!adsQueue.length) {
+                imgEl.style.display = 'none';
+                vidEl.pause();
+                vidEl.style.display = 'none';
+                emptyEl.style.display = 'block';
+                return;
+            }
+
+            emptyEl.style.display = 'none';
+            if (currentIdx >= adsQueue.length) {
+                currentIdx = 0;
+            }
+            const ad = adsQueue[currentIdx];
+            currentIdx += 1;
+
+            if (ad.media_type === 'video') {
+                imgEl.style.display = 'none';
+                vidEl.style.display = 'block';
+                vidEl.src = ad.media_url;
+                vidEl.onended = () => playNextAd();
+                vidEl.play().catch(() => {
+                    slideTimer = setTimeout(playNextAd, (ad.duration || 8) * 1000);
+                });
+            } else {
+                vidEl.pause();
+                vidEl.style.display = 'none';
+                imgEl.style.display = 'block';
+                imgEl.src = ad.media_url;
+                slideTimer = setTimeout(playNextAd, (ad.duration || 8) * 1000);
+            }
+        }
+
+        async function fetchAds() {
+            try {
+                const res = await fetch(`/api/ads?branch=${encodeURIComponent(branchName)}`, { cache: 'no-store' });
+                const data = await res.json();
+                const incoming = Array.isArray(data.ads) ? data.ads : [];
+                const changed = JSON.stringify(incoming.map(x => [x.id, x.active, x.duration, x.media_url])) !==
+                                JSON.stringify(adsQueue.map(x => [x.id, x.active, x.duration, x.media_url]));
+                if (changed) {
+                    adsQueue = incoming;
+                    currentIdx = 0;
+                    playNextAd();
+                } else if (!slideTimer && adsQueue.length && imgEl.style.display === 'none' && vidEl.style.display === 'none') {
+                    playNextAd();
+                }
+            } catch (e) {}
+        }
+
+        fetchAds();
+        setInterval(fetchAds, 10000);
+    </script>
+</body>
+</html>
