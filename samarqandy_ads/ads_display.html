@@ -1,136 +1,552 @@
 <!DOCTYPE html>
 <html lang="ar" dir="rtl">
 <head>
-    <meta charset="UTF-8">
-    <title>شاشة عرض الإعلانات - {{ 'كل الفروع' if selected_branch == 'ALL' else selected_branch }}</title>
-    <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@700;800&display=swap" rel="stylesheet">
-    <style>
-        html, body {
-            margin: 0;
-            padding: 0;
-            width: 100%;
-            height: 100%;
-            background-color: #000000;
-            color: #ffffff;
-            font-family: 'Cairo', Arial, sans-serif;
-            overflow: hidden;
-        }
-        .stage {
-            position: relative;
-            width: 100vw;
-            height: 100vh;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            background: #000000;
-        }
-        .media-frame {
-            max-width: 100%;
-            max-height: 100%;
-            width: 100%;
-            height: 100%;
-            object-fit: contain;
-            display: none;
-        }
-        .empty-state {
-            text-align: center;
-            padding: 24px;
-            font-size: 22px;
-            font-weight: 800;
-            color: #e5e7eb;
-        }
-        .branch-pill {
-            position: fixed;
-            top: 14px;
-            left: 14px;
-            z-index: 20;
-            background: rgba(123, 17, 19, 0.88);
-            color: #ffffff;
-            padding: 6px 14px;
-            border-radius: 999px;
-            font-size: 12px;
-            font-weight: 800;
-        }
-    </style>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>شاشة عرض الإعلانات - سمرقندي</title>
+  <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700&display=swap" rel="stylesheet" />
+  <style>
+    :root {
+      --bg-main: #090b10;
+      --bar-bg: rgba(18, 22, 31, 0.88);
+      --bar-border: rgba(255, 255, 255, 0.14);
+      --accent: #7a1c24;
+      --accent-hover: #96232d;
+      --text-main: #f8fafc;
+      --text-muted: #cbd5e1;
+      --input-bg: rgba(255, 255, 255, 0.08);
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    html, body {
+      width: 100%;
+      height: 100%;
+      background: var(--bg-main);
+      color: var(--text-main);
+      font-family: 'Cairo', sans-serif;
+      overflow: hidden;
+      user-select: none;
+    }
+
+    #stage {
+      position: relative;
+      width: 100vw;
+      height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: #05070b;
+    }
+
+    .media-layer {
+      position: absolute;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+      object-fit: contain;
+      opacity: 0;
+      transition: opacity 0.45s ease;
+      background: #05070b;
+    }
+
+    .media-layer.active {
+      opacity: 1;
+      z-index: 1;
+    }
+
+    #emptyState {
+      position: relative;
+      z-index: 2;
+      text-align: center;
+      padding: 28px 36px;
+      border-radius: 16px;
+      background: rgba(18, 22, 31, 0.85);
+      border: 1px solid var(--bar-border);
+      max-width: 540px;
+      display: none;
+    }
+
+    #emptyState h2 {
+      font-size: 22px;
+      margin-bottom: 10px;
+      color: #fff;
+    }
+
+    #emptyState p {
+      font-size: 15px;
+      color: var(--text-muted);
+      line-height: 1.7;
+    }
+
+    /* شريط التحكم العائم */
+    #controlBar {
+      position: fixed;
+      top: 16px;
+      left: 50%;
+      transform: translateX(-50%);
+      z-index: 50;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      flex-wrap: wrap;
+      padding: 8px 14px;
+      border-radius: 999px;
+      background: var(--bar-bg);
+      border: 1px solid var(--bar-border);
+      backdrop-filter: blur(10px);
+      box-shadow: 0 10px 30px rgba(0, 0, 0, 0.45);
+      transition: opacity 0.25s ease, transform 0.25s ease;
+    }
+
+    #controlBar.hidden-bar {
+      opacity: 0;
+      pointer-events: none;
+      transform: translate(-50%, -12px);
+    }
+
+    .ctrl-btn,
+    .ctrl-select,
+    .ctrl-input {
+      height: 36px;
+      border-radius: 999px;
+      border: 1px solid var(--bar-border);
+      background: var(--input-bg);
+      color: var(--text-main);
+      font-family: 'Cairo', sans-serif;
+      font-size: 13px;
+      font-weight: 600;
+      padding: 0 12px;
+      outline: none;
+      transition: background 0.2s ease, border-color 0.2s ease;
+    }
+
+    .ctrl-btn {
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+      text-decoration: none;
+      white-space: nowrap;
+    }
+
+    .ctrl-btn:hover,
+    .ctrl-select:hover,
+    .ctrl-input:hover {
+      background: rgba(255, 255, 255, 0.14);
+    }
+
+    .ctrl-btn.back-btn {
+      background: var(--accent);
+      border-color: transparent;
+      color: #fff;
+      padding: 0 16px;
+    }
+
+    .ctrl-btn.back-btn:hover {
+      background: var(--accent-hover);
+    }
+
+    .ctrl-group {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 12.5px;
+      color: var(--text-muted);
+      white-space: nowrap;
+    }
+
+    .ctrl-select option {
+      background: #141923;
+      color: #fff;
+    }
+
+    .ctrl-input {
+      width: 68px;
+      text-align: center;
+      padding: 0 8px;
+    }
+
+    #toggleBarBtn {
+      position: fixed;
+      top: 16px;
+      right: 16px;
+      z-index: 55;
+      height: 36px;
+      padding: 0 14px;
+      border-radius: 999px;
+      border: 1px solid var(--bar-border);
+      background: var(--bar-bg);
+      color: var(--text-main);
+      font-family: 'Cairo', sans-serif;
+      font-size: 12.5px;
+      font-weight: 600;
+      cursor: pointer;
+      backdrop-filter: blur(8px);
+    }
+
+    #toggleBarBtn:hover {
+      background: rgba(255, 255, 255, 0.14);
+    }
+
+    #statusBadge {
+      font-size: 12px;
+      color: var(--text-muted);
+      padding: 0 6px;
+      white-space: nowrap;
+    }
+  </style>
 </head>
 <body>
-    <div class="branch-pill">الفرع: {{ 'كل الفروع' if selected_branch == 'ALL' else selected_branch }}</div>
-    <div class="stage">
-        <img id="adImage" class="media-frame" alt="إعلان">
-        <video id="adVideo" class="media-frame" autoplay muted playsinline></video>
-        <div id="emptyState" class="empty-state" style="display: none;">لا توجد إعلانات نشطة حالياً لهذا الفرع</div>
+  <button id="toggleBarBtn" type="button" title="إظهار أو إخفاء شريط التحكم">التحكم</button>
+
+  <div id="controlBar">
+    <a id="backBtn" class="ctrl-btn back-btn" href="/ads">← رجوع</a>
+
+    <label class="ctrl-group" for="fitSelect">
+      <span>حجم الصورة:</span>
+      <select id="fitSelect" class="ctrl-select">
+        <option value="contain">احتواء كامل (Contain)</option>
+        <option value="cover">ملء الشاشة (Cover)</option>
+        <option value="fill">تمديد (Fill)</option>
+      </select>
+    </label>
+
+    <label class="ctrl-group" for="durationInput">
+      <span>المدة (ثانية):</span>
+      <input id="durationInput" class="ctrl-input" type="number" min="2" max="300" step="1" value="8" />
+    </label>
+
+    <button id="prevBtn" class="ctrl-btn" type="button" title="السابق">السابق</button>
+    <button id="playPauseBtn" class="ctrl-btn" type="button" title="إيقاف مؤقت / استئناف">إيقاف</button>
+    <button id="nextBtn" class="ctrl-btn" type="button" title="التالي">التالي</button>
+
+    <span id="statusBadge">0 / 0</span>
+  </div>
+
+  <main id="stage">
+    <img id="imgA" class="media-layer" alt="إعلان" />
+    <img id="imgB" class="media-layer" alt="إعلان" />
+    <video id="vidPlayer" class="media-layer" autoplay muted playsinline></video>
+
+    <div id="emptyState">
+      <h2 id="emptyTitle">لا توجد إعلانات نشطة للعرض حالياً</h2>
+      <p id="emptyDesc">تأكد من إضافة إعلان وتفعيله للفرع المختار من لوحة التحكم، ثم أعد تحميل الصفحة.</p>
     </div>
+  </main>
 
-    <script>
-        const branchName = {{ selected_branch | tojson }};
-        const imgEl = document.getElementById('adImage');
-        const vidEl = document.getElementById('adVideo');
-        const emptyEl = document.getElementById('emptyState');
+  <script>
+    (function () {
+      const STORAGE_FIT_KEY = "samarqandy_ads_object_fit_v1";
+      const STORAGE_DUR_KEY = "samarqandy_ads_duration_sec_v1";
 
-        let adsQueue = [];
-        let currentIdx = 0;
-        let slideTimer = null;
+      const urlParams = new URLSearchParams(window.location.search);
+      const branchParam = (urlParams.get("branch") || "{{ branch | default('ALL') }}").trim();
 
-        function clearTimer() {
-            if (slideTimer) {
-                clearTimeout(slideTimer);
-                slideTimer = null;
-            }
+      const backBtn = document.getElementById("backBtn");
+      const fitSelect = document.getElementById("fitSelect");
+      const durationInput = document.getElementById("durationInput");
+      const prevBtn = document.getElementById("prevBtn");
+      const nextBtn = document.getElementById("nextBtn");
+      const playPauseBtn = document.getElementById("playPauseBtn");
+      const toggleBarBtn = document.getElementById("toggleBarBtn");
+      const controlBar = document.getElementById("controlBar");
+      const statusBadge = document.getElementById("statusBadge");
+
+      const imgA = document.getElementById("imgA");
+      const imgB = document.getElementById("imgB");
+      const vidPlayer = document.getElementById("vidPlayer");
+      const emptyState = document.getElementById("emptyState");
+      const emptyTitle = document.getElementById("emptyTitle");
+      const emptyDesc = document.getElementById("emptyDesc");
+
+      const backUrl = "{{ back_url | default('/ads') }}";
+      if (backUrl && !backUrl.includes("{{")) {
+        backBtn.href = backUrl;
+      }
+
+      let activeImgLayer = imgA;
+      let inactiveImgLayer = imgB;
+      let adsList = [];
+      let currentIndex = 0;
+      let slideTimer = null;
+      let isPaused = false;
+      let hideBarTimeout = null;
+
+      // استرجاع الإعدادات المحفوظة
+      const savedFit = localStorage.getItem(STORAGE_FIT_KEY);
+      if (["contain", "cover", "fill"].includes(savedFit)) {
+        fitSelect.value = savedFit;
+      }
+
+      const savedDur = parseInt(localStorage.getItem(STORAGE_DUR_KEY), 10);
+      if (!Number.isNaN(savedDur) && savedDur >= 2 && savedDur <= 300) {
+        durationInput.value = savedDur;
+      }
+
+      function applyObjectFit() {
+        const fitVal = fitSelect.value;
+        localStorage.setItem(STORAGE_FIT_KEY, fitVal);
+        imgA.style.objectFit = fitVal;
+        imgB.style.objectFit = fitVal;
+        vidPlayer.style.objectFit = fitVal;
+      }
+
+      function getDurationMs() {
+        let sec = parseInt(durationInput.value, 10);
+        if (Number.isNaN(sec) || sec < 2) sec = 2;
+        if (sec > 300) sec = 300;
+        durationInput.value = sec;
+        localStorage.setItem(STORAGE_DUR_KEY, String(sec));
+        return sec * 1000;
+      }
+
+      function normalizeUrl(rawUrl) {
+        if (!rawUrl || typeof rawUrl !== "string") return "";
+        const clean = rawUrl.trim().replace(/\\/g, "/");
+        if (!clean) return "";
+        if (clean.startsWith("http://") || clean.startsWith("https://") || clean.startsWith("/")) {
+          return clean;
+        }
+        if (clean.startsWith("static/")) {
+          return "/" + clean;
+        }
+        return "/static/ads_media/" + clean;
+      }
+
+      function isVideoItem(item, url) {
+        const typeStr = String(item.type || item.media_type || "").toLowerCase();
+        if (typeStr.includes("video")) return true;
+        return /\.(mp4|webm|ogg|mov)(\?.*)?$/i.test(url);
+      }
+
+      function isActiveAd(item) {
+        if (item.active === false || item.is_active === false || item.enabled === false) return false;
+        const statusStr = String(item.status || "").toLowerCase();
+        if (statusStr === "inactive" || statusStr === "paused" || statusStr === "disabled" || statusStr === "متوقف" || statusStr === "موقوف") {
+          return false;
+        }
+        return true;
+      }
+
+      function matchesBranch(item, targetBranch) {
+        if (!targetBranch || targetBranch.toUpperCase() === "ALL") return true;
+
+        const rawBranches = item.branches ?? item.branch ?? item.target_branches ?? [];
+        if (Array.isArray(rawBranches)) {
+          if (rawBranches.length === 0) return true;
+          const normalized = rawBranches.map((b) => String(b).trim().toLowerCase());
+          if (normalized.includes("all") || normalized.includes("كل الفروع")) return true;
+          return normalized.includes(targetBranch.toLowerCase());
         }
 
-        function playNextAd() {
-            clearTimer();
-            if (!adsQueue.length) {
-                imgEl.style.display = 'none';
-                vidEl.pause();
-                vidEl.style.display = 'none';
-                emptyEl.style.display = 'block';
-                return;
-            }
+        const single = String(rawBranches).trim().toLowerCase();
+        if (!single || single === "all" || single === "كل الفروع") return true;
+        return single === targetBranch.toLowerCase();
+      }
 
-            emptyEl.style.display = 'none';
-            if (currentIdx >= adsQueue.length) {
-                currentIdx = 0;
-            }
-            const ad = adsQueue[currentIdx];
-            currentIdx += 1;
+      function extractAdsArray(payload) {
+        if (!payload) return [];
+        if (Array.isArray(payload)) return payload;
+        if (Array.isArray(payload.ads)) return payload.ads;
+        if (Array.isArray(payload.items)) return payload.items;
+        if (Array.isArray(payload.data)) return payload.data;
+        if (payload.data && Array.isArray(payload.data.ads)) return payload.data.ads;
+        return [];
+      }
 
-            if (ad.media_type === 'video') {
-                imgEl.style.display = 'none';
-                vidEl.style.display = 'block';
-                vidEl.src = ad.media_url;
-                vidEl.onended = () => playNextAd();
-                vidEl.play().catch(() => {
-                    slideTimer = setTimeout(playNextAd, (ad.duration || 8) * 1000);
-                });
-            } else {
-                vidEl.pause();
-                vidEl.style.display = 'none';
-                imgEl.style.display = 'block';
-                imgEl.src = ad.media_url;
-                slideTimer = setTimeout(playNextAd, (ad.duration || 8) * 1000);
-            }
-        }
+      async function loadAds() {
+        let rawItems = [];
 
-        async function fetchAds() {
+        // 1) محاولة قراءة بيانات ممررة من قالب Flask إن وُجدت
+        try {
+          const jinjaAds = JSON.parse('{{ ads_json | default("null") | safe }}');
+          if (jinjaAds) {
+            rawItems = extractAdsArray(jinjaAds);
+          }
+        } catch (_) {}
+
+        // 2) إذا لم توجد، جلب البيانات من API أو ملف البيانات
+        if (!rawItems.length) {
+          const endpoints = [
+            `/api/ads/branch-${encodeURIComponent(branchParam || "ALL")}`,
+            `/api/ads?branch=${encodeURIComponent(branchParam || "ALL")}`,
+            "/api/ads",
+            "/ads_data.json"
+          ];
+
+          for (const ep of endpoints) {
             try {
-                const res = await fetch(`/api/ads?branch=${encodeURIComponent(branchName)}`, { cache: 'no-store' });
-                const data = await res.json();
-                const incoming = Array.isArray(data.ads) ? data.ads : [];
-                const changed = JSON.stringify(incoming.map(x => [x.id, x.active, x.duration, x.media_url])) !==
-                                JSON.stringify(adsQueue.map(x => [x.id, x.active, x.duration, x.media_url]));
-                if (changed) {
-                    adsQueue = incoming;
-                    currentIdx = 0;
-                    playNextAd();
-                } else if (!slideTimer && adsQueue.length && imgEl.style.display === 'none' && vidEl.style.display === 'none') {
-                    playNextAd();
-                }
-            } catch (e) {}
+              const res = await fetch(ep, { cache: "no-store" });
+              if (!res.ok) continue;
+              const data = await res.json();
+              const parsed = extractAdsArray(data);
+              if (parsed.length > 0) {
+                rawItems = parsed;
+                break;
+              }
+            } catch (_) {}
+          }
         }
 
-        fetchAds();
-        setInterval(fetchAds, 10000);
-    </script>
+        adsList = rawItems
+          .filter(isActiveAd)
+          .filter((item) => matchesBranch(item, branchParam))
+          .map((item) => {
+            const url = normalizeUrl(item.url || item.src || item.media_url || item.image_url || item.file || item.path || "");
+            const customSec = parseInt(item.duration ?? item.seconds ?? item.delay, 10);
+            return {
+              title: item.title || item.name || "إعلان",
+              url,
+              isVideo: isVideoItem(item, url),
+              durationSec: !Number.isNaN(customSec) && customSec >= 2 ? customSec : null
+            };
+          })
+          .filter((item) => Boolean(item.url));
+
+        if (!adsList.length) {
+          showEmptyState(
+            "لا توجد إعلانات نشطة للعرض حالياً",
+            `الفرع المحدد: ${branchParam || "الكل"}. تأكد من وجود إعلان مفعل وله ملف صالح.`
+          );
+          return;
+        }
+
+        emptyState.style.display = "none";
+        currentIndex = 0;
+        showAd(0);
+      }
+
+      function showEmptyState(title, desc) {
+        clearTimeout(slideTimer);
+        imgA.classList.remove("active");
+        imgB.classList.remove("active");
+        vidPlayer.classList.remove("active");
+        vidPlayer.pause();
+        statusBadge.textContent = "0 / 0";
+        emptyTitle.textContent = title;
+        emptyDesc.textContent = desc;
+        emptyState.style.display = "block";
+      }
+
+      function clearTimer() {
+        if (slideTimer) {
+          clearTimeout(slideTimer);
+          slideTimer = null;
+        }
+      }
+
+      function scheduleNext(item) {
+        clearTimer();
+        if (isPaused || adsList.length <= 1) return;
+        const delay = item && item.durationSec ? item.durationSec * 1000 : getDurationMs();
+        slideTimer = setTimeout(() => {
+          nextAd();
+        }, delay);
+      }
+
+      function showAd(index) {
+        if (!adsList.length) return;
+        currentIndex = ((index % adsList.length) + adsList.length) % adsList.length;
+        const item = adsList[currentIndex];
+        statusBadge.textContent = `${currentIndex + 1} / ${adsList.length}`;
+        clearTimer();
+
+        if (item.isVideo) {
+          activeImgLayer.classList.remove("active");
+          inactiveImgLayer.classList.remove("active");
+          vidPlayer.src = item.url;
+          vidPlayer.classList.add("active");
+          vidPlayer.currentTime = 0;
+          vidPlayer.play().catch(() => {});
+
+          vidPlayer.onended = () => {
+            if (!isPaused) nextAd();
+          };
+          scheduleNext(item);
+        } else {
+          vidPlayer.pause();
+          vidPlayer.removeAttribute("src");
+          vidPlayer.load();
+          vidPlayer.classList.remove("active");
+
+          const targetLayer = inactiveImgLayer;
+          targetLayer.onload = () => {
+            targetLayer.classList.add("active");
+            activeImgLayer.classList.remove("active");
+            inactiveImgLayer = activeImgLayer;
+            activeImgLayer = targetLayer;
+            scheduleNext(item);
+          };
+          targetLayer.onerror = () => {
+            showEmptyState(
+              "تعذر تحميل ملف الإعلان",
+              `الرابط غير متاح أو تالف: ${item.url}`
+            );
+          };
+          targetLayer.src = item.url;
+        }
+      }
+
+      function nextAd() {
+        showAd(currentIndex + 1);
+      }
+
+      function prevAd() {
+        showAd(currentIndex - 1);
+      }
+
+      function togglePause() {
+        isPaused = !isPaused;
+        playPauseBtn.textContent = isPaused ? "تشغيل" : "إيقاف";
+        if (isPaused) {
+          clearTimer();
+          if (adsList[currentIndex] && adsList[currentIndex].isVideo) {
+            vidPlayer.pause();
+          }
+        } else {
+          if (adsList[currentIndex] && adsList[currentIndex].isVideo) {
+            vidPlayer.play().catch(() => {});
+          }
+          scheduleNext(adsList[currentIndex]);
+        }
+      }
+
+      function resetAutoHideBar() {
+        controlBar.classList.remove("hidden-bar");
+        clearTimeout(hideBarTimeout);
+        hideBarTimeout = setTimeout(() => {
+          if (!isPaused) {
+            controlBar.classList.add("hidden-bar");
+          }
+        }, 6000);
+      }
+
+      fitSelect.addEventListener("change", applyObjectFit);
+      durationInput.addEventListener("change", () => {
+        getDurationMs();
+        if (adsList[currentIndex]) scheduleNext(adsList[currentIndex]);
+      });
+      nextBtn.addEventListener("click", nextAd);
+      prevBtn.addEventListener("click", prevAd);
+      playPauseBtn.addEventListener("click", togglePause);
+      toggleBarBtn.addEventListener("click", () => {
+        controlBar.classList.toggle("hidden-bar");
+      });
+
+      ["mousemove", "touchstart", "keydown"].forEach((evt) => {
+        window.addEventListener(evt, resetAutoHideBar, { passive: true });
+      });
+
+      applyObjectFit();
+      resetAutoHideBar();
+      loadAds();
+    })();
+  </script>
 </body>
 </html>
