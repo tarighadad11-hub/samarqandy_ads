@@ -125,6 +125,12 @@
       transition: background 0.2s ease, border-color 0.2s ease;
     }
 
+    .ctrl-btn:hover,
+    .ctrl-select:hover,
+    .ctrl-input:hover {
+      background: rgba(255, 255, 255, 0.14);
+    }
+
     .ctrl-btn {
       cursor: pointer;
       display: inline-flex;
@@ -133,12 +139,6 @@
       gap: 6px;
       text-decoration: none;
       white-space: nowrap;
-    }
-
-    .ctrl-btn:hover,
-    .ctrl-select:hover,
-    .ctrl-input:hover {
-      background: rgba(255, 255, 255, 0.14);
     }
 
     .ctrl-btn.back-btn {
@@ -244,9 +244,10 @@
     (function () {
       const STORAGE_FIT_KEY = "samarqandy_ads_object_fit_v1";
       const STORAGE_DUR_KEY = "samarqandy_ads_duration_sec_v1";
+      const ALLOWED_FITS = ["contain", "cover", "fill"];
 
       const urlParams = new URLSearchParams(window.location.search);
-      const branchParam = (urlParams.get("branch") || "{{ branch | default('ALL') }}").trim();
+      const branchParam = (urlParams.get("branch") || "{{ selected_branch | default(branch) | default('ALL') }}").trim();
 
       const backBtn = document.getElementById("backBtn");
       const fitSelect = document.getElementById("fitSelect");
@@ -280,7 +281,7 @@
 
       // استرجاع الإعدادات المحفوظة
       const savedFit = localStorage.getItem(STORAGE_FIT_KEY);
-      if (["contain", "cover", "fill"].includes(savedFit)) {
+      if (ALLOWED_FITS.includes(savedFit)) {
         fitSelect.value = savedFit;
       }
 
@@ -320,7 +321,7 @@
       }
 
       function isVideoItem(item, url) {
-        const typeStr = String(item.type || item.media_type || "").toLowerCase();
+        const typeStr = String(item.media_type || item.type || "").toLowerCase();
         if (typeStr.includes("video")) return true;
         return /\.(mp4|webm|ogg|mov)(\?.*)?$/i.test(url);
       }
@@ -398,7 +399,7 @@
           .filter(isActiveAd)
           .filter((item) => matchesBranch(item, branchParam))
           .map((item) => {
-            const url = normalizeUrl(item.url || item.src || item.media_url || item.image_url || item.file || item.path || "");
+            const url = normalizeUrl(item.media_url || item.url || item.src || item.image_url || item.file || item.path || "");
             const customSec = parseInt(item.duration ?? item.seconds ?? item.delay, 10);
             return {
               title: item.title || item.name || "إعلان",
