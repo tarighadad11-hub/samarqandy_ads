@@ -1,136 +1,358 @@
 <!DOCTYPE html>
 <html lang="ar" dir="rtl">
 <head>
-    <meta charset="UTF-8">
-    <title>شاشة عرض الإعلانات - {{ 'كل الفروع' if selected_branch == 'ALL' else selected_branch }}</title>
-    <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@700;800&display=swap" rel="stylesheet">
-    <style>
-        html, body {
-            margin: 0;
-            padding: 0;
-            width: 100%;
-            height: 100%;
-            background-color: #000000;
-            color: #ffffff;
-            font-family: 'Cairo', Arial, sans-serif;
-            overflow: hidden;
-        }
-        .stage {
-            position: relative;
-            width: 100vw;
-            height: 100vh;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            background: #000000;
-        }
-        .media-frame {
-            max-width: 100%;
-            max-height: 100%;
-            width: 100%;
-            height: 100%;
-            object-fit: contain;
-            display: none;
-        }
-        .empty-state {
-            text-align: center;
-            padding: 24px;
-            font-size: 22px;
-            font-weight: 800;
-            color: #e5e7eb;
-        }
-        .branch-pill {
-            position: fixed;
-            top: 14px;
-            left: 14px;
-            z-index: 20;
-            background: rgba(123, 17, 19, 0.88);
-            color: #ffffff;
-            padding: 6px 14px;
-            border-radius: 999px;
-            font-size: 12px;
-            font-weight: 800;
-        }
-    </style>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>شاشة عرض الإعلانات - سمرقندي</title>
+  <style>
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    html, body {
+      width: 100%;
+      height: 100%;
+      background-color: #0b0b0c;
+      color: #ffffff;
+      font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+      overflow: hidden;
+    }
+
+    /* حاوية العرض الكاملة */
+    .stage {
+      position: relative;
+      width: 100vw;
+      height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: #0b0b0c;
+    }
+
+    #slide-image {
+      width: 100%;
+      height: 100%;
+      object-fit: contain;
+      transition: opacity 0.35s ease;
+      display: block;
+    }
+
+    #slide-video {
+      width: 100%;
+      height: 100%;
+      object-fit: contain;
+      display: none;
+    }
+
+    /* شريط التحكم والرجوع */
+    .controls-bar {
+      position: fixed;
+      top: 16px;
+      right: 16px;
+      z-index: 9999;
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 10px;
+      background: rgba(18, 18, 22, 0.92);
+      border: 1px solid rgba(255, 255, 255, 0.14);
+      padding: 10px 14px;
+      border-radius: 14px;
+      box-shadow: 0 10px 25px rgba(0, 0, 0, 0.55);
+      backdrop-filter: blur(8px);
+      transition: opacity 0.3s ease, transform 0.3s ease;
+    }
+
+    .controls-bar.hidden-auto {
+      opacity: 0;
+      pointer-events: none;
+      transform: translateY(-8px);
+    }
+
+    .btn-back {
+      background-color: #8b1e24;
+      color: #ffffff;
+      text-decoration: none;
+      padding: 8px 16px;
+      border-radius: 999px;
+      font-size: 14px;
+      font-weight: 700;
+      border: none;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      transition: background-color 0.2s ease, transform 0.15s ease;
+    }
+
+    .btn-back:hover {
+      background-color: #a6242b;
+      transform: translateY(-1px);
+    }
+
+    .control-group {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      background: rgba(255, 255, 255, 0.06);
+      padding: 6px 10px;
+      border-radius: 10px;
+      font-size: 13px;
+    }
+
+    .control-group label {
+      color: #e5e7eb;
+      white-space: nowrap;
+    }
+
+    .control-group select,
+    .control-group input[type="number"] {
+      background: #1f2026;
+      color: #ffffff;
+      border: 1px solid rgba(255, 255, 255, 0.2);
+      border-radius: 8px;
+      padding: 5px 8px;
+      font-size: 13px;
+      outline: none;
+    }
+
+    .control-group input[type="number"] {
+      width: 72px;
+    }
+
+    .btn-save-mini {
+      background: #ffffff;
+      color: #111827;
+      border: none;
+      border-radius: 8px;
+      padding: 6px 12px;
+      font-size: 12px;
+      font-weight: 700;
+      cursor: pointer;
+    }
+
+    .btn-save-mini:hover {
+      background: #e5e7eb;
+    }
+
+    .status-badge {
+      font-size: 12px;
+      color: #d1d5db;
+      padding: 0 4px;
+    }
+
+    /* زر صغير لإظهار الشريط إذا اختفى */
+    #reopen-bar-btn {
+      position: fixed;
+      top: 16px;
+      right: 16px;
+      z-index: 9998;
+      background: rgba(139, 30, 36, 0.9);
+      color: #fff;
+      border: none;
+      border-radius: 999px;
+      padding: 8px 14px;
+      font-size: 13px;
+      font-weight: 700;
+      cursor: pointer;
+      display: none;
+    }
+  </style>
 </head>
 <body>
-    <div class="branch-pill">الفرع: {{ 'كل الفروع' if selected_branch == 'ALL' else selected_branch }}</div>
-    <div class="stage">
-        <img id="adImage" class="media-frame" alt="إعلان">
-        <video id="adVideo" class="media-frame" autoplay muted playsinline></video>
-        <div id="emptyState" class="empty-state" style="display: none;">لا توجد إعلانات نشطة حالياً لهذا الفرع</div>
+
+  <button id="reopen-bar-btn" type="button">إعدادات العرض</button>
+
+  <div id="controls-bar" class="controls-bar">
+    <!-- عدّل الرابط / حسب مسار الصفحة الرئيسية أو الفروع في تطبيقك -->
+    <a id="back-link" href="{{ back_url or '/' }}" class="btn-back">
+      <span>↩</span>
+      <span>رجوع للصفحة</span>
+    </a>
+
+    <div class="control-group">
+      <label for="image-fit-select">حجم الصورة:</label>
+      <select id="image-fit-select">
+        <option value="contain">احتواء كامل (Contain)</option>
+        <option value="cover">ملء الشاشة (Cover)</option>
+        <option value="fill">تمديد كامل (Fill)</option>
+        <option value="scale-down">تصغير تلقائي (Scale Down)</option>
+        <option value="none">حجم أصلي (None)</option>
+      </select>
     </div>
 
-    <script>
-        const branchName = {{ selected_branch | tojson }};
-        const imgEl = document.getElementById('adImage');
-        const vidEl = document.getElementById('adVideo');
-        const emptyEl = document.getElementById('emptyState');
+    <div class="control-group">
+      <label for="duration-seconds-input">المدة (ثانية):</label>
+      <input
+        id="duration-seconds-input"
+        type="number"
+        min="1"
+        max="3600"
+        step="1"
+        value="10"
+      />
+    </div>
 
-        let adsQueue = [];
-        let currentIdx = 0;
-        let slideTimer = null;
+    <button id="apply-now-btn" type="button" class="btn-save-mini">تطبيق</button>
+    <span id="timer-indicator" class="status-badge">10ث</span>
+  </div>
 
-        function clearTimer() {
-            if (slideTimer) {
-                clearTimeout(slideTimer);
-                slideTimer = null;
-            }
+  <main class="stage" id="stage">
+    <img id="slide-image" src="" alt="إعلان الشاشة" />
+    <video id="slide-video" autoplay muted playsinline></video>
+  </main>
+
+  <script>
+    // استقبل قائمة الإعلانات من Flask أو ضع روابط صور افتراضية للتجربة
+    const ADS_ITEMS = {{ ads_items | tojson if ads_items is defined else '[]' }};
+
+    const FALLBACK_ADS = [
+      { type: "image", url: "/static/sample1.jpg", duration: 10 },
+      { type: "image", url: "/static/sample2.jpg", duration: 10 }
+    ];
+
+    const playlist = (Array.isArray(ADS_ITEMS) && ADS_ITEMS.length > 0) ? ADS_ITEMS : FALLBACK_ADS;
+
+    const STORAGE_FIT_KEY = "samarqandy_display_image_fit";
+    const STORAGE_DURATION_KEY = "samarqandy_display_duration_sec";
+
+    const slideImage = document.getElementById("slide-image");
+    const slideVideo = document.getElementById("slide-video");
+    const fitSelect = document.getElementById("image-fit-select");
+    const durationInput = document.getElementById("duration-seconds-input");
+    const applyNowBtn = document.getElementById("apply-now-btn");
+    const timerIndicator = document.getElementById("timer-indicator");
+    const controlsBar = document.getElementById("controls-bar");
+    const reopenBarBtn = document.getElementById("reopen-bar-btn");
+
+    let currentIndex = 0;
+    let slideTimer = null;
+    let hideBarTimer = null;
+
+    function getSavedFit() {
+      return localStorage.getItem(STORAGE_FIT_KEY) || "contain";
+    }
+
+    function getSavedDurationSec() {
+      const raw = parseInt(localStorage.getItem(STORAGE_DURATION_KEY) || "10", 10);
+      return Number.isFinite(raw) && raw >= 1 ? raw : 10;
+    }
+
+    function applyImageSize(fitValue) {
+      const validFits = ["contain", "cover", "fill", "scale-down", "none"];
+      const chosenFit = validFits.includes(fitValue) ? fitValue : "contain";
+
+      slideImage.style.objectFit = chosenFit;
+      slideVideo.style.objectFit = chosenFit;
+      fitSelect.value = chosenFit;
+      localStorage.setItem(STORAGE_FIT_KEY, chosenFit);
+    }
+
+    function applyDurationValue(secValue) {
+      const cleanSec = Math.max(1, Math.min(3600, parseInt(secValue, 10) || 10));
+      durationInput.value = cleanSec;
+      timerIndicator.textContent = `${cleanSec}ث`;
+      localStorage.setItem(STORAGE_DURATION_KEY, String(cleanSec));
+      return cleanSec;
+    }
+
+    function clearSlideTimer() {
+      if (slideTimer) {
+        clearTimeout(slideTimer);
+        slideTimer = null;
+      }
+    }
+
+    function scheduleNextSlide(seconds) {
+      clearSlideTimer();
+      if (playlist.length <= 1) return;
+
+      slideTimer = setTimeout(() => {
+        currentIndex = (currentIndex + 1) % playlist.length;
+        renderCurrentSlide();
+      }, seconds * 1000);
+    }
+
+    function renderCurrentSlide() {
+      if (!playlist.length) return;
+
+      const item = playlist[currentIndex];
+      const itemType = item.type || "image";
+      const itemUrl = item.url || item.src || "";
+      const activeSeconds = getSavedDurationSec();
+
+      applyImageSize(getSavedFit());
+      applyDurationValue(activeSeconds);
+
+      if (itemType === "video") {
+        slideImage.style.display = "none";
+        slideVideo.style.display = "block";
+        slideVideo.src = itemUrl;
+        slideVideo.onended = () => {
+          currentIndex = (currentIndex + 1) % playlist.length;
+          renderCurrentSlide();
+        };
+        slideVideo.play().catch(() => {});
+      } else {
+        slideVideo.pause();
+        slideVideo.style.display = "none";
+        slideImage.style.display = "block";
+        slideImage.style.opacity = "0.35";
+        slideImage.src = itemUrl;
+        slideImage.onload = () => {
+          slideImage.style.opacity = "1";
+        };
+        scheduleNextSlide(activeSeconds);
+      }
+    }
+
+    function resetAutoHideBar() {
+      controlsBar.classList.remove("hidden-auto");
+      reopenBarBtn.style.display = "none";
+
+      if (hideBarTimer) clearTimeout(hideBarTimer);
+      hideBarTimer = setTimeout(() => {
+        const activeTag = document.activeElement ? document.activeElement.tagName : "";
+        if (activeTag !== "INPUT" && activeTag !== "SELECT") {
+          controlsBar.classList.add("hidden-auto");
+          reopenBarBtn.style.display = "inline-block";
         }
+      }, 7000);
+    }
 
-        function playNextAd() {
-            clearTimer();
-            if (!adsQueue.length) {
-                imgEl.style.display = 'none';
-                vidEl.pause();
-                vidEl.style.display = 'none';
-                emptyEl.style.display = 'block';
-                return;
-            }
+    // أحداث تغيير الحجم والمدة
+    fitSelect.addEventListener("change", () => {
+      applyImageSize(fitSelect.value);
+      resetAutoHideBar();
+    });
 
-            emptyEl.style.display = 'none';
-            if (currentIdx >= adsQueue.length) {
-                currentIdx = 0;
-            }
-            const ad = adsQueue[currentIdx];
-            currentIdx += 1;
+    durationInput.addEventListener("change", () => {
+      const updatedSec = applyDurationValue(durationInput.value);
+      scheduleNextSlide(updatedSec);
+      resetAutoHideBar();
+    });
 
-            if (ad.media_type === 'video') {
-                imgEl.style.display = 'none';
-                vidEl.style.display = 'block';
-                vidEl.src = ad.media_url;
-                vidEl.onended = () => playNextAd();
-                vidEl.play().catch(() => {
-                    slideTimer = setTimeout(playNextAd, (ad.duration || 8) * 1000);
-                });
-            } else {
-                vidEl.pause();
-                vidEl.style.display = 'none';
-                imgEl.style.display = 'block';
-                imgEl.src = ad.media_url;
-                slideTimer = setTimeout(playNextAd, (ad.duration || 8) * 1000);
-            }
-        }
+    applyNowBtn.addEventListener("click", () => {
+      applyImageSize(fitSelect.value);
+      const updatedSec = applyDurationValue(durationInput.value);
+      scheduleNextSlide(updatedSec);
+      resetAutoHideBar();
+    });
 
-        async function fetchAds() {
-            try {
-                const res = await fetch(`/api/ads?branch=${encodeURIComponent(branchName)}`, { cache: 'no-store' });
-                const data = await res.json();
-                const incoming = Array.isArray(data.ads) ? data.ads : [];
-                const changed = JSON.stringify(incoming.map(x => [x.id, x.active, x.duration, x.media_url])) !==
-                                JSON.stringify(adsQueue.map(x => [x.id, x.active, x.duration, x.media_url]));
-                if (changed) {
-                    adsQueue = incoming;
-                    currentIdx = 0;
-                    playNextAd();
-                } else if (!slideTimer && adsQueue.length && imgEl.style.display === 'none' && vidEl.style.display === 'none') {
-                    playNextAd();
-                }
-            } catch (e) {}
-        }
+    reopenBarBtn.addEventListener("click", () => {
+      resetAutoHideBar();
+    });
 
-        fetchAds();
-        setInterval(fetchAds, 10000);
-    </script>
+    document.addEventListener("mousemove", resetAutoHideBar);
+    document.addEventListener("keydown", resetAutoHideBar);
+
+    // تهيئة أولية عند الفتح
+    applyImageSize(getSavedFit());
+    applyDurationValue(getSavedDurationSec());
+    renderCurrentSlide();
+    resetAutoHideBar();
+  </script>
 </body>
 </html>
