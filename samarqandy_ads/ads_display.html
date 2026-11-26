@@ -67,7 +67,7 @@
       border-radius: 16px;
       background: rgba(18, 22, 31, 0.85);
       border: 1px solid var(--bar-border);
-      max-width: 540px;
+      max-width: 560px;
       display: none;
     }
 
@@ -83,7 +83,6 @@
       line-height: 1.7;
     }
 
-    /* شريط التحكم العائم */
     #controlBar {
       position: fixed;
       top: 16px;
@@ -125,6 +124,12 @@
       transition: background 0.2s ease, border-color 0.2s ease;
     }
 
+    .ctrl-btn:hover,
+    .ctrl-select:hover,
+    .ctrl-input:hover {
+      background: rgba(255, 255, 255, 0.14);
+    }
+
     .ctrl-btn {
       cursor: pointer;
       display: inline-flex;
@@ -133,12 +138,6 @@
       gap: 6px;
       text-decoration: none;
       white-space: nowrap;
-    }
-
-    .ctrl-btn:hover,
-    .ctrl-select:hover,
-    .ctrl-input:hover {
-      background: rgba(255, 255, 255, 0.14);
     }
 
     .ctrl-btn.back-btn {
@@ -244,9 +243,10 @@
     (function () {
       const STORAGE_FIT_KEY = "samarqandy_ads_object_fit_v1";
       const STORAGE_DUR_KEY = "samarqandy_ads_duration_sec_v1";
+      const ALLOWED_FITS = ["contain", "cover", "fill"];
 
       const urlParams = new URLSearchParams(window.location.search);
-      const branchParam = (urlParams.get("branch") || "{{ branch | default('ALL') }}").trim();
+      const branchParam = (urlParams.get("branch") || "{{ selected_branch | default('ALL') }}").trim();
 
       const backBtn = document.getElementById("backBtn");
       const fitSelect = document.getElementById("fitSelect");
@@ -278,9 +278,8 @@
       let isPaused = false;
       let hideBarTimeout = null;
 
-      // استرجاع الإعدادات المحفوظة
       const savedFit = localStorage.getItem(STORAGE_FIT_KEY);
-      if (["contain", "cover", "fill"].includes(savedFit)) {
+      if (ALLOWED_FITS.includes(savedFit)) {
         fitSelect.value = savedFit;
       }
 
@@ -320,7 +319,7 @@
       }
 
       function isVideoItem(item, url) {
-        const typeStr = String(item.type || item.media_type || "").toLowerCase();
+        const typeStr = String(item.media_type || item.type || "").toLowerCase();
         if (typeStr.includes("video")) return true;
         return /\.(mp4|webm|ogg|mov)(\?.*)?$/i.test(url);
       }
@@ -328,7 +327,7 @@
       function isActiveAd(item) {
         if (item.active === false || item.is_active === false || item.enabled === false) return false;
         const statusStr = String(item.status || "").toLowerCase();
-        if (statusStr === "inactive" || statusStr === "paused" || statusStr === "disabled" || statusStr === "متوقف" || statusStr === "موقوف") {
+        if (["inactive", "paused", "disabled", "متوقف", "موقوف"].includes(statusStr)) {
           return false;
         }
         return true;
@@ -336,7 +335,6 @@
 
       function matchesBranch(item, targetBranch) {
         if (!targetBranch || targetBranch.toUpperCase() === "ALL") return true;
-
         const rawBranches = item.branches ?? item.branch ?? item.target_branches ?? [];
         if (Array.isArray(rawBranches)) {
           if (rawBranches.length === 0) return true;
@@ -344,7 +342,6 @@
           if (normalized.includes("all") || normalized.includes("كل الفروع")) return true;
           return normalized.includes(targetBranch.toLowerCase());
         }
-
         const single = String(rawBranches).trim().toLowerCase();
         if (!single || single === "all" || single === "كل الفروع") return true;
         return single === targetBranch.toLowerCase();
@@ -363,7 +360,6 @@
       async function loadAds() {
         let rawItems = [];
 
-        // 1) محاولة قراءة بيانات ممررة من قالب Flask إن وُجدت
         try {
           const jinjaAds = JSON.parse('{{ ads_json | default("null") | safe }}');
           if (jinjaAds) {
@@ -371,10 +367,8 @@
           }
         } catch (_) {}
 
-        // 2) إذا لم توجد، جلب البيانات من API أو ملف البيانات
         if (!rawItems.length) {
           const endpoints = [
-            `/api/ads/branch-${encodeURIComponent(branchParam || "ALL")}`,
             `/api/ads?branch=${encodeURIComponent(branchParam || "ALL")}`,
             "/api/ads",
             "/ads_data.json"
@@ -398,7 +392,7 @@
           .filter(isActiveAd)
           .filter((item) => matchesBranch(item, branchParam))
           .map((item) => {
-            const url = normalizeUrl(item.url || item.src || item.media_url || item.image_url || item.file || item.path || "");
+            const url = normalizeUrl(item.media_url || item.url || item.src || item.image_url || item.file || item.path || "");
             const customSec = parseInt(item.duration ?? item.seconds ?? item.delay, 10);
             return {
               title: item.title || item.name || "إعلان",
